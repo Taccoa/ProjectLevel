@@ -185,9 +185,11 @@ xcopy ..\..\GamePlay\gameplay\res\ui res\ui\* /s /y /d</Command>
     <None Include="res\shaders\textured.vert" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\CircBuffer.cpp" />
     <ClCompile Include="src\lvlProject.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\CircBuffer.h" />
     <ClInclude Include="src\lvlProject.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

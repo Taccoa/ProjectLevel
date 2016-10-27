@@ -78,9 +78,15 @@
     <ClInclude Include="src\lvlProject.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="src\CircBuffer.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\lvlProject.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CircBuffer.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,13 +1,103 @@
 #include "lvlProject.h"
 
+using namespace std;
+
+struct mMainHeader
+{
+	unsigned int transformHeader = 0;
+	unsigned int meshHeader = 0;
+};
+
+struct mTransform
+{
+	string name;
+	float translateX, translateY, translateZ,
+		rotatex, rotateY, rotateZ,
+		scaleX, scaleY, scaleZ;
+};
+
+struct mVertex
+{
+	float posX, posY, posZ;
+	float norX, norY, norZ;
+	float U, V;
+};
+
+struct mMesh
+{
+	vector<mVertex> vertices;
+};
+
+struct mMeshHeader
+{
+	unsigned int verticesCount;
+};
+
 // Declare our game instance
 lvlProject game;
 
-lvlProject::lvlProject() : _scene(NULL), _wireframe(false){}
+lvlProject::lvlProject() : _scene(NULL), _wireframe(false) {}
+
+CircularBuffer createConsumer()
+{
+	size_t MemorySize = 10 * 1 << 20;
+	size_t chunkSize = 256;
+
+	CircularBuffer consumer = CircularBuffer(L"Buffer", MemorySize, false, chunkSize);
+
+	return consumer;
+}
+
+void lvlProject::readMsg(CircularBuffer consumer, Scene* _scene)
+{
+	char *msg = new char[((10 * 1 << 20) / 4)];
+	size_t msgLength = 0;
+	memset(msg, '\0', ((10 * 1 << 20) / 4));
+	mMainHeader mainH;
+
+	if (consumer.pop(msg, msgLength))
+	{
+		memcpy(&mainH, &msg[0], sizeof(mMainHeader));
+
+		if (mainH.meshHeader == 1)
+		{
+			meshReader(msg);
+		}
+		if (mainH.transformHeader == 1)
+		{
+			transformReader(msg);
+		}
+	}
+
+	delete[] msg;
+}
+
+void lvlProject::meshReader(char * msg)
+{
+	mMeshHeader meshH;
+	mVertex vert;
+	mMesh mesh;
+
+	memcpy(&meshH, &msg[sizeof(mMainHeader)], sizeof(mMeshHeader));
+
+	for (int i = 0; i < meshH.verticesCount; i++)
+	{
+		memcpy(&vert, &msg[sizeof(mMainHeader) + sizeof(mMeshHeader) + (sizeof(mVertex) * i)], sizeof(mVertex));
+		mesh.vertices.push_back(vert);
+	}
+}
+
+void lvlProject::transformReader(char * msg)
+{
+	mTransform trans;
+	memcpy(&trans, &msg[sizeof(mMainHeader)], sizeof(mTransform));
+}
 
 void lvlProject::initialize()
 {
 	_scene = Scene::create();
+
+	_consumer = createConsumer();
 
 	Node* lightNode = Node::create("pointLightShape1");
 	Light* light = Light::createPoint(Vector3(0.5f, 0.5f, 0.5f), 20);
@@ -16,6 +106,8 @@ void lvlProject::initialize()
 	_scene->addNode(lightNode);
 	lightNode->release();
 	light->release();
+
+	setVsync(false);
 }
 
 void lvlProject::finalize()
@@ -25,6 +117,7 @@ void lvlProject::finalize()
 
 void lvlProject::update(float elapsedTime)
 {
+	readMsg(_consumer, _scene);
 	//MessageType type = mayaData.read();
 
 	//while (type)

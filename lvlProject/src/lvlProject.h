@@ -2,9 +2,10 @@
 #define lvlProject_H_
 
 #include "gameplay.h"
+#include "CircBuffer.h"
+#include <vector>
 
 using namespace gameplay;
-
 
 class lvlProject: public Game
 {
@@ -12,6 +13,10 @@ public:
     lvlProject();
 	void keyEvent(Keyboard::KeyEvent evt, int key);
     void touchEvent(Touch::TouchEvent evt, int x, int y, unsigned int contactIndex);
+	CircularBuffer _consumer;
+	void readMsg(CircularBuffer consumer, Scene* _scene);
+	void meshReader(char *msg);
+	void transformReader(char *msg);
 
 protected:
     void initialize();
@@ -23,7 +28,7 @@ private:
     bool drawScene(Node* node);
     Scene* _scene;
     bool _wireframe;
-	enum MessageType 
+	/*enum MessageType 
 	{
 		mNewMesh,
 		mVertexChange,
@@ -34,7 +39,7 @@ private:
 		mCameraChanged,
 		mLight,
 		mNodeRemoved
-	};
+	};*/
 };
 
 #endif
