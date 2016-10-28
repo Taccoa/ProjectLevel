@@ -1,18 +1,19 @@
 #include "lvlProject.h"
+#define BUFFERSIZE 8<<20
 
 using namespace std;
 
 struct mMainHeader
 {
-	unsigned int transformHeader = 0;
-	unsigned int meshHeader = 0;
+	unsigned int transform = 0;
+	unsigned int mesh = 0;
 };
 
 struct mTransform
 {
-	string name;
+	char name[256];
 	float translateX, translateY, translateZ,
-		rotatex, rotateY, rotateZ,
+		rotateX, rotateY, rotateZ,
 		scaleX, scaleY, scaleZ;
 };
 
@@ -40,30 +41,29 @@ lvlProject::lvlProject() : _scene(NULL), _wireframe(false) {}
 
 CircularBuffer createConsumer()
 {
-	size_t MemorySize = 10 * 1 << 20;
 	size_t chunkSize = 256;
 
-	CircularBuffer consumer = CircularBuffer(L"Buffer", MemorySize, false, chunkSize);
+	CircularBuffer consumer = CircularBuffer(L"Buffer", BUFFERSIZE, false, chunkSize);
 
 	return consumer;
 }
 
 void lvlProject::readMsg(CircularBuffer consumer, Scene* _scene)
 {
-	char *msg = new char[((10 * 1 << 20) / 4)];
+	char *msg = new char[(BUFFERSIZE / 4)];
 	size_t msgLength = 0;
-	memset(msg, '\0', ((10 * 1 << 20) / 4));
+	memset(msg, '\0', (BUFFERSIZE / 4));
 	mMainHeader mainH;
 
 	if (consumer.pop(msg, msgLength))
 	{
 		memcpy(&mainH, &msg[0], sizeof(mMainHeader));
 
-		if (mainH.meshHeader == 1)
+		if (mainH.mesh == 1)
 		{
 			meshReader(msg);
 		}
-		if (mainH.transformHeader == 1)
+		if (mainH.transform == 1)
 		{
 			transformReader(msg);
 		}
@@ -85,12 +85,41 @@ void lvlProject::meshReader(char * msg)
 		memcpy(&vert, &msg[sizeof(mMainHeader) + sizeof(mMeshHeader) + (sizeof(mVertex) * i)], sizeof(mVertex));
 		mesh.vertices.push_back(vert);
 	}
+
+	VertexFormat::Element elements[] = {
+		VertexFormat::Element(VertexFormat::POSITION, 3),
+		VertexFormat::Element(VertexFormat::NORMAL, 3),
+		VertexFormat::Element(VertexFormat::TEXCOORD0, 2)
+	};
+	const VertexFormat vertFormat(elements, ARRAYSIZE(elements));
+
+	Mesh* triMesh = Mesh::createMesh(vertFormat, meshH.verticesCount, true);
+	Model* triModel = Model::create(triMesh);
+
+	SAFE_RELEASE(triMesh);
+	Node* _node = Node::create();
+	_node->setDrawable(triModel);
+	_scene->addNode(_node);
 }
 
 void lvlProject::transformReader(char * msg)
 {
 	mTransform trans;
 	memcpy(&trans, &msg[sizeof(mMainHeader)], sizeof(mTransform));
+
+	char* name = trans.name;
+
+	Node* node = _scene->findNode(name);
+	if (node)
+	{
+		Quaternion newRot(trans.rotateX, trans.rotateY, trans.rotateZ, 0);
+
+		Vector3 newTrans(trans.translateX, trans.translateY, trans.translateZ);
+
+		Vector3 newScale(trans.scaleX, trans.scaleY, trans.scaleZ);
+		node->set(newScale, newRot, newTrans);
+	}
+	delete[] name;
 }
 
 void lvlProject::initialize()
